@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "935814174728",
+    "project_id": "pennypinch-bd035",
+    "storage_bucket": "pennypinch-bd035.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:935814174728:android:ddaab250d9204d853819bd",
+        "android_client_info": {
+          "package_name": "uk.ac.tees.mad.s3540722.pennypinch"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA10Gjm9plBu0-Aby-T-fIjNyxZpa1mXms"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
