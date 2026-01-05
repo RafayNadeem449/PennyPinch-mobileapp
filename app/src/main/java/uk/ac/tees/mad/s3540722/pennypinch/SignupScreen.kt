@@ -9,15 +9,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.UserProfileChangeRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import uk.ac.tees.mad.s3540722.pennypinch.data.FirestoreService
 
 @Composable
 fun SignupScreen(nav: NavController) {
 
-    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
 
-    var fullName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
@@ -28,17 +31,15 @@ fun SignupScreen(nav: NavController) {
         verticalArrangement = Arrangement.Center
     ) {
 
-        // FULL NAME FIELD
         TextField(
-            value = fullName,
-            onValueChange = { fullName = it },
+            value = name,
+            onValueChange = { name = it },
             label = { Text("Full Name") },
             modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(Modifier.height(16.dp))
 
-        // EMAIL FIELD
         TextField(
             value = email,
             onValueChange = { email = it },
@@ -48,7 +49,6 @@ fun SignupScreen(nav: NavController) {
 
         Spacer(Modifier.height(16.dp))
 
-        // PASSWORD FIELD
         TextField(
             value = password,
             onValueChange = { password = it },
@@ -60,38 +60,28 @@ fun SignupScreen(nav: NavController) {
 
         Button(
             onClick = {
-
-                if (fullName.isBlank() || email.isBlank() || password.isBlank()) {
-                    Toast.makeText(context, "All fields are required!", Toast.LENGTH_SHORT).show()
+                if (name.isBlank() || email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "All fields required", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
                 auth.createUserWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
-
                         if (task.isSuccessful) {
+                            CoroutineScope(Dispatchers.IO).launch {
+                                FirestoreService.createUser(name, email)
+                            }
 
-                            // Update Firebase user profile with name
-                            val user = auth.currentUser
-                            val profileUpdate = UserProfileChangeRequest.Builder()
-                                .setDisplayName(fullName)
-                                .build()
-
-                            user?.updateProfile(profileUpdate)
-
-                            Toast.makeText(context, "Account created successfully!", Toast.LENGTH_SHORT).show()
-
+                            Toast.makeText(context, "Account created!", Toast.LENGTH_SHORT).show()
                             nav.navigate("login")
-
                         } else {
                             Toast.makeText(
                                 context,
-                                task.exception?.localizedMessage ?: "Signup failed",
+                                task.exception?.message ?: "Signup failed",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
                     }
-
             },
             modifier = Modifier.fillMaxWidth()
         ) {

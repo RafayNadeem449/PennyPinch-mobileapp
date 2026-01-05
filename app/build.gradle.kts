@@ -46,8 +46,14 @@ android {
 dependencies {
 
     // Firebase (managed by BOM)
+    // Firebase BOM
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
+
+// Firebase Auth
     implementation("com.google.firebase:firebase-auth-ktx")
+
+// Firebase Firestore (NO VERSION HERE!)
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
     // Navigation
     implementation("androidx.navigation:navigation-compose:2.7.7")
