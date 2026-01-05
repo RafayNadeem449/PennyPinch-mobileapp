@@ -2,6 +2,7 @@ package uk.ac.tees.mad.s3540722.pennypinch.data
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
@@ -10,74 +11,71 @@ object FirebaseService {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    private fun uid(): String = auth.currentUser!!.uid
+    private fun uid() = auth.currentUser!!.uid
 
     // ---------- USER ----------
     suspend fun createUser(name: String, email: String) {
-        val data = mapOf(
-            "name" to name,
-            "email" to email,
-            "balance" to 0.0
-        )
-        db.collection("users").document(uid()).set(data).await()
+        db.collection("users").document(uid()).set(
+            mapOf(
+                "name" to name,
+                "email" to email,
+                "balance" to 0.0
+            )
+        ).await()
     }
 
-    suspend fun getUserName(): String {
-        val doc = db.collection("users").document(uid()).get().await()
-        return doc.getString("name") ?: "User"
-    }
+    suspend fun getUserName(): String =
+        db.collection("users").document(uid()).get().await()
+            .getString("name") ?: "User"
 
-    suspend fun getBalance(): Double {
-        val doc = db.collection("users").document(uid()).get().await()
-        return doc.getDouble("balance") ?: 0.0
-    }
+    suspend fun getBalance(): Double =
+        db.collection("users").document(uid()).get().await()
+            .getDouble("balance") ?: 0.0
 
     // ---------- TRANSACTIONS ----------
     suspend fun addTransaction(tx: Transaction) {
-        val ref = db.collection("users")
+        db.collection("users")
             .document(uid())
             .collection("transactions")
+            .add(tx)
+            .await()
 
-        ref.add(tx).await()
-
-        val balance = getBalance()
-        val newBalance =
-            if (tx.type == "Income") balance + tx.amount
-            else balance - tx.amount
+        val delta =
+            if (tx.type == "Income") tx.amount
+            else -tx.amount
 
         db.collection("users")
             .document(uid())
-            .set(mapOf("balance" to newBalance), SetOptions.merge())
+            .update("balance", FieldValue.increment(delta))
             .await()
     }
 
-    suspend fun getTransactions(): List<Transaction> {
+    suspend fun getTransactions(): List<Transaction> =
+        db.collection("users")
+            .document(uid())
+            .collection("transactions")
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .await()
+            .toObjects(Transaction::class.java)
+
+    suspend fun markExpenseCleared(tx: Transaction) {
         val snap = db.collection("users")
             .document(uid())
             .collection("transactions")
-            .orderBy("timestamp")
+            .whereEqualTo("timestamp", tx.timestamp)
             .get()
             .await()
 
-        return snap.toObjects(Transaction::class.java)
-    }
+        if (snap.isEmpty) return
 
-    // ---------- CATEGORIES ----------
-    suspend fun addCategory(name: String) {
+        snap.documents.first().reference
+            .set(mapOf("isCleared" to true), SetOptions.merge())
+            .await()
+
         db.collection("users")
             .document(uid())
-            .collection("categories")
-            .add(Category(name))
+            .update("balance", FieldValue.increment(tx.amount))
             .await()
-    }
-
-    suspend fun getCategories(): List<String> {
-        val snap = db.collection("users")
-            .document(uid())
-            .collection("categories")
-            .get()
-            .await()
-
-        return snap.documents.mapNotNull { it.getString("name") }
     }
 }

@@ -2,6 +2,8 @@ package uk.ac.tees.mad.s3540722.pennypinch.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -28,7 +30,6 @@ fun HomeScreen(nav: NavController) {
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    // 🔁 Load data from Firebase
     fun loadData() {
         scope.launch {
             loading = true
@@ -39,7 +40,6 @@ fun HomeScreen(nav: NavController) {
         }
     }
 
-    // Load when screen is first shown
     LaunchedEffect(Unit) {
         loadData()
     }
@@ -49,138 +49,154 @@ fun HomeScreen(nav: NavController) {
         .sumOf { it.amount }
 
     val totalExpenses = transactions
-        .filter { it.type == "Expense" }
+        .filter { it.type == "Expense" && !it.isCleared }
         .sumOf { it.amount }
 
-    Column(
+    val visibleTransactions = transactions.take(10)
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        // 🔹 Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        /* ---------------- HEADER ---------------- */
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Welcome $userName",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Text(
+                    text = "Logout",
+                    color = Color.Red,
+                    modifier = Modifier.clickable {
+                        auth.signOut()
+                        nav.navigate("login") {
+                            popUpTo("home") { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+
+        /* ---------------- LOADING ---------------- */
+        if (loading) {
+            item {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
+        }
+
+        /* ---------------- SUMMARY CARDS ---------------- */
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                SummaryCard(
+                    title = "Balance",
+                    value = "£$balance",
+                    backgroundColor = Color(0xFFB2DFDB),
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryCard(
+                    title = "Income",
+                    value = "£$totalIncome",
+                    backgroundColor = Color(0xFFFFCCBC),
+                    modifier = Modifier.weight(1f)
+                )
+                SummaryCard(
+                    title = "Expenses",
+                    value = "£$totalExpenses",
+                    backgroundColor = Color(0xFFFFCDD2),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+
+        /* ---------------- ADD BUTTON ---------------- */
+        item {
+            Button(
+                onClick = { nav.navigate("addTransaction") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Add Transaction")
+            }
+        }
+
+        /* ---------------- TITLE ---------------- */
+        item {
             Text(
-                text = "Welcome $userName",
-                fontSize = 22.sp,
+                text = "Recent Transactions",
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
 
-            Text(
-                text = "Logout",
-                color = Color.Red,
-                modifier = Modifier.clickable {
-                    auth.signOut()
-                    nav.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+        /* ---------------- TRANSACTIONS ---------------- */
+        if (visibleTransactions.isEmpty() && !loading) {
+            item {
+                Text("No transactions yet")
+            }
+        } else {
+            items(visibleTransactions) { tx ->
+                TransactionCard(
+                    tx = tx,
+                    onClear = {
+                        scope.launch {
+                            FirebaseService.markExpenseCleared(tx)
+                            loadData()
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (loading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(16.dp))
-        }
-
-        // 🔹 Summary Cards
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            SummaryCard(
-                title = "Balance",
-                value = "£$balance",
-                color = Color(0xFFB2DFDB),
-                modifier = Modifier.weight(1f)
-            )
-            SummaryCard(
-                title = "Income",
-                value = "£$totalIncome",
-                color = Color(0xFFFFCCBC),
-                modifier = Modifier.weight(1f)
-            )
-            SummaryCard(
-                title = "Expenses",
-                value = "£$totalExpenses",
-                color = Color(0xFFFFCDD2),
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 🔹 Add Transaction Button
-        Button(
-            onClick = { nav.navigate("addTransaction") },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Add Transaction")
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // 🔹 Transactions List
-        Text(
-            text = "Recent Transactions",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (!loading && transactions.isEmpty()) {
-            Text("No transactions yet")
-        }
-
-        transactions.forEach { tx ->
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .padding(12.dp)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+        /* ---------------- VIEW ALL ---------------- */
+        if (transactions.size > 10) {
+            item {
+                Button(
+                    onClick = { nav.navigate("allTransactions") },
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column {
-                        Text(tx.title, fontWeight = FontWeight.Medium)
-                        Text("${tx.type} • ${tx.category}")
-                    }
-                    Text("£${tx.amount}", fontWeight = FontWeight.Bold)
+                    Text("View All Transactions")
                 }
             }
         }
     }
 }
 
+/* ---------------- SUMMARY CARD ---------------- */
 @Composable
-private fun SummaryCard(
+fun SummaryCard(
     title: String,
     value: String,
-    color: Color,
+    backgroundColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = color),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
         shape = RoundedCornerShape(12.dp)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(title)
-            Text(value, fontWeight = FontWeight.Bold)
+            Text(title, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
         }
     }
 }

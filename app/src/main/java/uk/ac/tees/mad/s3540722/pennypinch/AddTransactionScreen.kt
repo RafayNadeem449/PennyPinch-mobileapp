@@ -3,13 +3,10 @@ package uk.ac.tees.mad.s3540722.pennypinch.ui
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -25,17 +22,12 @@ fun AddTransactionScreen(nav: NavController) {
 
     var title by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
+    var type by remember { mutableStateOf("Expense") }
 
-    var type by remember { mutableStateOf("Expense") } // Income / Expense
-
-    // Category logic
-    val expenseCategories = listOf(
-        "Bills", "Dinner", "Shopping", "Utilities", "General"
-    )
-
-    var expanded by remember { mutableStateOf(false) }
+    val categories = listOf("Bills", "Dinner", "Shopping", "Utilities", "General")
     var selectedCategory by remember { mutableStateOf("Bills") }
     var customCategory by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -43,7 +35,7 @@ fun AddTransactionScreen(nav: NavController) {
             .padding(16.dp)
     ) {
 
-        // Header
+        /* ---------- HEADER WITH BACK ---------- */
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -59,9 +51,9 @@ fun AddTransactionScreen(nav: NavController) {
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Title
+        /* ---------- TITLE ---------- */
         TextField(
             value = title,
             onValueChange = { title = it },
@@ -69,44 +61,30 @@ fun AddTransactionScreen(nav: NavController) {
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Amount
+        /* ---------- AMOUNT ---------- */
         TextField(
             value = amount,
             onValueChange = { amount = it },
             label = { Text("Amount (£)") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Type selection
-        Text("Type")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(24.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = type == "Income",
-                    onClick = { type = "Income" }
-                )
-                Text("Income")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(
-                    selected = type == "Expense",
-                    onClick = { type = "Expense" }
-                )
-                Text("Expense")
-            }
+        /* ---------- TYPE ---------- */
+        Row {
+            RadioButton(type == "Income", { type = "Income" })
+            Text("Income")
+            Spacer(Modifier.width(16.dp))
+            RadioButton(type == "Expense", { type = "Expense" })
+            Text("Expense")
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // CATEGORY (ONLY FOR EXPENSE)
+        /* ---------- CATEGORY (ONLY FOR EXPENSE) ---------- */
         if (type == "Expense") {
 
             ExposedDropdownMenuBox(
@@ -118,9 +96,6 @@ fun AddTransactionScreen(nav: NavController) {
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Category") },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                    },
                     modifier = Modifier
                         .menuAnchor()
                         .fillMaxWidth()
@@ -130,81 +105,55 @@ fun AddTransactionScreen(nav: NavController) {
                     expanded = expanded,
                     onDismissRequest = { expanded = false }
                 ) {
-                    expenseCategories.forEach { category ->
+                    categories.forEach {
                         DropdownMenuItem(
-                            text = { Text(category) },
+                            text = { Text(it) },
                             onClick = {
-                                selectedCategory = category
+                                selectedCategory = it
                                 expanded = false
-                                if (category != "General") {
-                                    customCategory = ""
-                                }
                             }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Custom category field ONLY if General
             if (selectedCategory == "General") {
+                Spacer(modifier = Modifier.height(8.dp))
                 TextField(
                     value = customCategory,
                     onValueChange = { customCategory = it },
                     label = { Text("Write your category") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(modifier = Modifier.height(12.dp))
             }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Save Button
+        /* ---------- SAVE ---------- */
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-
                 val amt = amount.toDoubleOrNull()
-                if (title.isBlank() || amt == null || amt <= 0) {
-                    Toast.makeText(
-                        context,
-                        "Please enter valid title and amount",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                if (title.isBlank() || amt == null) {
+                    Toast.makeText(context, "Invalid input", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
                 val finalCategory =
-                    if (type == "Income") {
-                        "Income"
-                    } else {
-                        if (selectedCategory == "General") {
-                            if (customCategory.isBlank()) {
-                                Toast.makeText(
-                                    context,
-                                    "Please write a category",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                return@Button
-                            }
-                            customCategory.trim()
-                        } else {
-                            selectedCategory
-                        }
-                    }
+                    if (type == "Income") "Income"
+                    else if (selectedCategory == "General") customCategory
+                    else selectedCategory
 
                 scope.launch {
                     FirebaseService.addTransaction(
                         Transaction(
-                            title = title.trim(),
+                            title = title,
                             amount = amt,
                             type = type,
                             category = finalCategory
                         )
                     )
-                    Toast.makeText(context, "Transaction added", Toast.LENGTH_SHORT).show()
                     nav.popBackStack()
                 }
             }
