@@ -5,68 +5,79 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
-object FirestoreService {
+object FirebaseService {
 
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
-    // Save user profile after signup
-    suspend fun createUser(name: String, email: String) {
-        val uid = auth.currentUser?.uid ?: return
+    private fun uid(): String = auth.currentUser!!.uid
 
-        val userData = mapOf(
+    // ---------- USER ----------
+    suspend fun createUser(name: String, email: String) {
+        val data = mapOf(
             "name" to name,
             "email" to email,
             "balance" to 0.0
         )
+        db.collection("users").document(uid()).set(data).await()
+    }
+
+    suspend fun getUserName(): String {
+        val doc = db.collection("users").document(uid()).get().await()
+        return doc.getString("name") ?: "User"
+    }
+
+    suspend fun getBalance(): Double {
+        val doc = db.collection("users").document(uid()).get().await()
+        return doc.getDouble("balance") ?: 0.0
+    }
+
+    // ---------- TRANSACTIONS ----------
+    suspend fun addTransaction(tx: Transaction) {
+        val ref = db.collection("users")
+            .document(uid())
+            .collection("transactions")
+
+        ref.add(tx).await()
+
+        val balance = getBalance()
+        val newBalance =
+            if (tx.type == "Income") balance + tx.amount
+            else balance - tx.amount
 
         db.collection("users")
-            .document(uid)
-            .set(userData, SetOptions.merge())
+            .document(uid())
+            .set(mapOf("balance" to newBalance), SetOptions.merge())
             .await()
     }
 
-    // Add a new transaction to Firestore
-    suspend fun addTransaction(tx: Transaction) {
-        val senderId = auth.currentUser?.uid ?: return
-
-        val data = mapOf(
-            "senderId" to senderId,
-            "receiverEmail" to tx.receiverEmail,
-            "title" to tx.title,
-            "amount" to tx.amount,
-            "category" to tx.category,
-            "timestamp" to tx.timestamp
-        )
-
-        db.collection("transactions")
-            .add(data)
-            .await()
-    }
-
-    // Get all transactions for current user
-    suspend fun getUserTransactions(): List<Transaction> {
-        val uid = auth.currentUser?.uid ?: return emptyList()
-
-        val snapshot = db.collection("transactions")
-            .whereEqualTo("senderId", uid)
+    suspend fun getTransactions(): List<Transaction> {
+        val snap = db.collection("users")
+            .document(uid())
+            .collection("transactions")
+            .orderBy("timestamp")
             .get()
             .await()
 
-        return snapshot.documents.mapNotNull { doc ->
-            val title = doc.getString("title") ?: return@mapNotNull null
-            val amount = doc.getDouble("amount") ?: return@mapNotNull null
-            val category = doc.getString("category") ?: return@mapNotNull null
-            val receiverEmail = doc.getString("receiverEmail") ?: ""
-            val timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+        return snap.toObjects(Transaction::class.java)
+    }
 
-            Transaction(
-                title = title,
-                amount = amount,
-                category = category,
-                receiverEmail = receiverEmail,
-                timestamp = timestamp
-            )
-        }
+    // ---------- CATEGORIES ----------
+    suspend fun addCategory(name: String) {
+        db.collection("users")
+            .document(uid())
+            .collection("categories")
+            .add(Category(name))
+            .await()
+    }
+
+    suspend fun getCategories(): List<String> {
+        val snap = db.collection("users")
+            .document(uid())
+            .collection("categories")
+            .get()
+            .await()
+
+        return snap.documents.mapNotNull { it.getString("name") }
     }
 }

@@ -12,7 +12,7 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import uk.ac.tees.mad.s3540722.pennypinch.data.FirestoreService
+import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 
 @Composable
 fun SignupScreen(nav: NavController) {
@@ -69,7 +69,7 @@ fun SignupScreen(nav: NavController) {
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
                             CoroutineScope(Dispatchers.IO).launch {
-                                FirestoreService.createUser(name, email)
+                                FirebaseService.createUser(name, email)
                             }
 
                             Toast.makeText(context, "Account created!", Toast.LENGTH_SHORT).show()
