@@ -2,19 +2,17 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-
-    // Google Services Plugin
     id("com.google.gms.google-services")
 }
 
 android {
     namespace = "uk.ac.tees.mad.s3540722.pennypinch"
-    compileSdk = 36
+    compileSdk = 36   // UPDATED
 
     defaultConfig {
         applicationId = "uk.ac.tees.mad.s3540722.pennypinch"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 36   // UPDATED
         versionCode = 1
         versionName = "1.0"
 
@@ -47,25 +45,17 @@ android {
 
 dependencies {
 
-    // ------------------------
-    // Firebase (BoM controls version)
-    // ------------------------
+    // Firebase (managed by BOM)
     implementation(platform("com.google.firebase:firebase-bom:33.1.2"))
     implementation("com.google.firebase:firebase-auth-ktx")
 
-    // ------------------------
     // Navigation
-    // ------------------------
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
-    // ------------------------
-    // Splash screen
-    // ------------------------
+    // Splash Screen
     implementation("androidx.core:core-splashscreen:1.0.1")
 
-    // ------------------------
-    // Compose + Material3
-    // ------------------------
+    // Compose Core
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -75,9 +65,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
-    // ------------------------
-    // Testing
-    // ------------------------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

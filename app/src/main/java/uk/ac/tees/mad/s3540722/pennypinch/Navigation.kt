@@ -8,6 +8,7 @@ import uk.ac.tees.mad.s3540722.pennypinch.ui.screens.*
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
+
     NavHost(
         navController = navController,
         startDestination = "splash"

@@ -14,11 +14,10 @@ import com.google.firebase.auth.FirebaseAuth
 fun LoginScreen(nav: NavController) {
 
     val context = LocalContext.current
+    val auth = FirebaseAuth.getInstance()
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-
-    val auth = FirebaseAuth.getInstance()
 
     Column(
         modifier = Modifier
@@ -48,24 +47,21 @@ fun LoginScreen(nav: NavController) {
         Button(
             onClick = {
                 if (email.isBlank() || password.isBlank()) {
-                    Toast.makeText(context, "Fields cannot be empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
                 auth.signInWithEmailAndPassword(email, password)
                     .addOnCompleteListener { task ->
                         if (task.isSuccessful) {
-
-                            // Navigate to Home Screen
+                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
                             nav.navigate("home") {
                                 popUpTo("login") { inclusive = true }
                             }
-
-                            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(
                                 context,
-                                task.exception?.message ?: "Login failed",
+                                task.exception?.localizedMessage ?: "Login failed",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -78,9 +74,7 @@ fun LoginScreen(nav: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TextButton(onClick = {
-            nav.navigate("signup")
-        }) {
+        TextButton(onClick = { nav.navigate("signup") }) {
             Text("Don't have an account? Sign Up")
         }
     }
