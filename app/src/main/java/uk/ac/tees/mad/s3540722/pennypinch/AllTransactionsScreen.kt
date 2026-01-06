@@ -7,7 +7,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
@@ -21,12 +20,15 @@ fun AllTransactionsScreen(nav: NavController) {
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(Unit) {
+    fun loadAll() {
         scope.launch {
+            loading = true
             transactions = FirebaseService.getTransactions()
             loading = false
         }
     }
+
+    LaunchedEffect(Unit) { loadAll() }
 
     Column(
         modifier = Modifier
@@ -69,7 +71,13 @@ fun AllTransactionsScreen(nav: NavController) {
             items(transactions) { tx ->
                 TransactionCard(
                     tx = tx,
-                    onClear = {} // No clearing from history screen
+                    onClear = {
+                        // allow clearing here too
+                        scope.launch {
+                            FirebaseService.markExpenseCleared(tx)
+                            loadAll()
+                        }
+                    }
                 )
             }
         }

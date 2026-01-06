@@ -1,4 +1,4 @@
-package uk.ac.tees.mad.s3540722.pennypinch.ui.screens
+package uk.ac.tees.mad.s3540722.pennypinch.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
@@ -9,8 +9,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 
@@ -18,74 +16,67 @@ import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 fun SignupScreen(nav: NavController) {
 
     val auth = FirebaseAuth.getInstance()
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    var name by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center
     ) {
 
-        TextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("Full Name") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Text("Create Account", style = MaterialTheme.typography.titleLarge)
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        TextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        OutlinedTextField(firstName, { firstName = it }, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(lastName, { lastName = it }, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
 
-        Spacer(Modifier.height(16.dp))
-
-        TextField(
-            value = password,
-            onValueChange = { password = it },
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = {
-                if (name.isBlank() || email.isBlank() || password.isBlank()) {
-                    Toast.makeText(context, "All fields required", Toast.LENGTH_SHORT).show()
+                if (firstName.isBlank() || lastName.isBlank() || email.isBlank() || password.isBlank()) {
+                    Toast.makeText(context, "Fill all fields", Toast.LENGTH_SHORT).show()
                     return@Button
                 }
 
-                auth.createUserWithEmailAndPassword(email, password)
-                    .addOnCompleteListener { task ->
-                        if (task.isSuccessful) {
-                            CoroutineScope(Dispatchers.IO).launch {
-                                FirebaseService.createUser(name, email)
-                            }
+                loading = true
 
-                            Toast.makeText(context, "Account created!", Toast.LENGTH_SHORT).show()
-                            nav.navigate("login")
-                        } else {
-                            Toast.makeText(
-                                context,
-                                task.exception?.message ?: "Signup failed",
-                                Toast.LENGTH_LONG
-                            ).show()
+                auth.createUserWithEmailAndPassword(email, password)
+                    .addOnSuccessListener {
+                        scope.launch {
+                            FirebaseService.createUser(
+                                fullName = "$firstName $lastName"
+                            )
+                            loading = false
+                            nav.navigate("home") {
+                                popUpTo("signup") { inclusive = true }
+                            }
                         }
+                    }
+                    .addOnFailureListener {
+                        loading = false
+                        Toast.makeText(context, it.message, Toast.LENGTH_SHORT).show()
                     }
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Sign Up")
+        }
+
+        if (loading) {
+            Spacer(modifier = Modifier.height(8.dp))
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
     }
 }

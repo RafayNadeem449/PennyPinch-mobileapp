@@ -15,16 +15,13 @@ import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 fun ProfileScreen(nav: NavController) {
 
     val scope = rememberCoroutineScope()
-
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var loading by remember { mutableStateOf(true) }
 
     LaunchedEffect(Unit) {
         scope.launch {
             fullName = FirebaseService.getUserName()
             email = FirebaseService.getUserEmail()
-            loading = false
         }
     }
 
@@ -34,34 +31,18 @@ fun ProfileScreen(nav: NavController) {
             .padding(16.dp)
     ) {
 
-        /* ---------- HEADER ---------- */
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                text = "Profile",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = "Back",
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.clickable {
-                    nav.popBackStack()
-                }
-            )
+            Text("Profile", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text("Back", color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable {
+                nav.popBackStack()
+            })
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        if (loading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            return@Column
-        }
-
-        /* ---------- FULL NAME ---------- */
         OutlinedTextField(
             value = fullName,
             onValueChange = {},
@@ -72,7 +53,6 @@ fun ProfileScreen(nav: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        /* ---------- EMAIL ---------- */
         OutlinedTextField(
             value = email,
             onValueChange = {},

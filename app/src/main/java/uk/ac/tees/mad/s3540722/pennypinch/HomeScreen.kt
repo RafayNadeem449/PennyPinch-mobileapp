@@ -30,20 +30,20 @@ fun HomeScreen(nav: NavController) {
     val scope = rememberCoroutineScope()
 
     var userName by remember { mutableStateOf("User") }
-    var balance by remember { mutableStateOf(0.0) }
-    var income by remember { mutableStateOf(0.0) }
-    var expenses by remember { mutableStateOf(0.0) }
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    val currencyFormatter = remember {
+    var income by remember { mutableStateOf(0.0) }
+    var expenses by remember { mutableStateOf(0.0) }
+    var balance by remember { mutableStateOf(0.0) }
+
+    val formatter = remember {
         NumberFormat.getCurrencyInstance(Locale.UK)
     }
 
-    // 🔹 Animated values
-    val animatedBalance by animateFloatAsState(balance.toFloat(), tween(600), label = "balance")
-    val animatedIncome by animateFloatAsState(income.toFloat(), tween(600), label = "income")
-    val animatedExpenses by animateFloatAsState(expenses.toFloat(), tween(600), label = "expenses")
+    val animIncome by animateFloatAsState(income.toFloat(), tween(500), label = "inc")
+    val animExpense by animateFloatAsState(expenses.toFloat(), tween(500), label = "exp")
+    val animBalance by animateFloatAsState(balance.toFloat(), tween(500), label = "bal")
 
     fun loadData() {
         scope.launch {
@@ -53,7 +53,7 @@ fun HomeScreen(nav: NavController) {
 
             income = transactions.filter { it.type == "Income" }.sumOf { it.amount }
             expenses = transactions.filter { it.type == "Expense" && !it.isCleared }.sumOf { it.amount }
-            balance = FirebaseService.getBalance()
+            balance = income - expenses
 
             loading = false
         }
@@ -61,12 +61,14 @@ fun HomeScreen(nav: NavController) {
 
     LaunchedEffect(Unit) { loadData() }
 
-    val visibleTransactions = transactions.take(10)
+    // ✅ DASHBOARD FILTER (FINAL LOGIC)
+    val dashboardTransactions = transactions
+        .filter { it.type == "Income" || (it.type == "Expense" && !it.isCleared) }
+        .sortedByDescending { it.timestamp }
+        .take(5)
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
@@ -76,7 +78,6 @@ fun HomeScreen(nav: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-
                 Text(
                     text = "Welcome $userName",
                     fontSize = 22.sp,
@@ -84,7 +85,6 @@ fun HomeScreen(nav: NavController) {
                     modifier = Modifier.weight(1f)
                 )
 
-                // 👤 Profile
                 Text(
                     text = "👤",
                     fontSize = 22.sp,
@@ -93,7 +93,6 @@ fun HomeScreen(nav: NavController) {
                         .clickable { nav.navigate("profile") }
                 )
 
-                // 🚪 Logout
                 Text(
                     text = "🚪",
                     fontSize = 22.sp,
@@ -111,59 +110,33 @@ fun HomeScreen(nav: NavController) {
             item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
         }
 
-        /* ---------- SUMMARY CARDS ---------- */
+        /* ---------- SUMMARY ---------- */
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                SummaryCard(
-                    title = "Balance",
-                    value = currencyFormatter.format(animatedBalance),
-                    backgroundColor = Color(0xFFB2DFDB),
-                    valueColor = Color.Black,
-                    modifier = Modifier.weight(1f)
-                )
-                SummaryCard(
-                    title = "Income",
-                    value = currencyFormatter.format(animatedIncome),
-                    backgroundColor = Color(0xFFFFCCBC),
-                    valueColor = Color(0xFF2E7D32),
-                    modifier = Modifier.weight(1f)
-                )
-                SummaryCard(
-                    title = "Expenses",
-                    value = currencyFormatter.format(animatedExpenses),
-                    backgroundColor = Color(0xFFFFCDD2),
-                    valueColor = Color(0xFFC62828),
-                    modifier = Modifier.weight(1f)
-                )
+                SummaryCard("Balance", formatter.format(animBalance), Color(0xFFB2DFDB), Color.Black, Modifier.weight(1f))
+                SummaryCard("Income", formatter.format(animIncome), Color(0xFFFFCCBC), Color(0xFF2E7D32), Modifier.weight(1f))
+                SummaryCard("Expenses", formatter.format(animExpense), Color(0xFFFFCDD2), Color(0xFFC62828), Modifier.weight(1f))
             }
         }
 
-        /* ---------- ADD TRANSACTION ---------- */
         item {
             Button(
                 onClick = { nav.navigate("addTransaction") },
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Add Transaction")
-            }
+            ) { Text("Add Transaction") }
         }
 
-        /* ---------- TRANSACTIONS ---------- */
         item {
-            Text(
-                text = "Recent Transactions",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("Recent Activity", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
-        if (visibleTransactions.isEmpty() && !loading) {
-            item { Text("No transactions yet") }
+        if (dashboardTransactions.isEmpty() && !loading) {
+            item { Text("No recent activity 🎉") }
         } else {
-            items(visibleTransactions) { tx ->
+            items(dashboardTransactions) { tx ->
                 TransactionCard(
                     tx = tx,
                     onClear = {
@@ -176,7 +149,7 @@ fun HomeScreen(nav: NavController) {
             }
         }
 
-        if (transactions.size > 10) {
+        if (dashboardTransactions.size > 1) {
             item {
                 Button(
                     onClick = { nav.navigate("allTransactions") },
@@ -194,31 +167,23 @@ fun HomeScreen(nav: NavController) {
 fun SummaryCard(
     title: String,
     value: String,
-    backgroundColor: Color,
+    bg: Color,
     valueColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier.height(110.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        colors = CardDefaults.cardColors(containerColor = bg),
         shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = value,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = valueColor,
-                maxLines = 1
-            )
+            Text(title, fontSize = 14.sp)
+            Spacer(Modifier.height(6.dp))
+            Text(value, fontSize = 22.sp, fontWeight = FontWeight.Bold, color = valueColor)
         }
     }
 }
