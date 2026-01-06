@@ -50,6 +50,10 @@ object FirebaseService {
             .await()
     }
 
+    suspend fun getUserEmail(): String {
+        return auth.currentUser?.email ?: ""
+    }
+
     suspend fun getTransactions(): List<Transaction> =
         db.collection("users")
             .document(uid())

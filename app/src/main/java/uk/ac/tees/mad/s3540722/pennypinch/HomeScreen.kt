@@ -1,5 +1,7 @@
 package uk.ac.tees.mad.s3540722.pennypinch.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,8 @@ import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 import uk.ac.tees.mad.s3540722.pennypinch.data.Transaction
+import java.text.NumberFormat
+import java.util.Locale
 
 @Composable
 fun HomeScreen(nav: NavController) {
@@ -27,30 +31,35 @@ fun HomeScreen(nav: NavController) {
 
     var userName by remember { mutableStateOf("User") }
     var balance by remember { mutableStateOf(0.0) }
+    var income by remember { mutableStateOf(0.0) }
+    var expenses by remember { mutableStateOf(0.0) }
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+
+    val currencyFormatter = remember {
+        NumberFormat.getCurrencyInstance(Locale.UK)
+    }
+
+    // 🔹 Animated values
+    val animatedBalance by animateFloatAsState(balance.toFloat(), tween(600), label = "balance")
+    val animatedIncome by animateFloatAsState(income.toFloat(), tween(600), label = "income")
+    val animatedExpenses by animateFloatAsState(expenses.toFloat(), tween(600), label = "expenses")
 
     fun loadData() {
         scope.launch {
             loading = true
             userName = FirebaseService.getUserName()
-            balance = FirebaseService.getBalance()
             transactions = FirebaseService.getTransactions()
+
+            income = transactions.filter { it.type == "Income" }.sumOf { it.amount }
+            expenses = transactions.filter { it.type == "Expense" && !it.isCleared }.sumOf { it.amount }
+            balance = FirebaseService.getBalance()
+
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-
-    val totalIncome = transactions
-        .filter { it.type == "Income" }
-        .sumOf { it.amount }
-
-    val totalExpenses = transactions
-        .filter { it.type == "Expense" && !it.isCleared }
-        .sumOf { it.amount }
+    LaunchedEffect(Unit) { loadData() }
 
     val visibleTransactions = transactions.take(10)
 
@@ -58,25 +67,36 @@ fun HomeScreen(nav: NavController) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
 
-        /* ---------------- HEADER ---------------- */
+        /* ---------- HEADER ---------- */
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
                 Text(
                     text = "Welcome $userName",
                     fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
                 )
 
+                // 👤 Profile
                 Text(
-                    text = "Logout",
-                    color = Color.Red,
+                    text = "👤",
+                    fontSize = 22.sp,
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .clickable { nav.navigate("profile") }
+                )
+
+                // 🚪 Logout
+                Text(
+                    text = "🚪",
+                    fontSize = 22.sp,
                     modifier = Modifier.clickable {
                         auth.signOut()
                         nav.navigate("login") {
@@ -87,41 +107,41 @@ fun HomeScreen(nav: NavController) {
             }
         }
 
-        /* ---------------- LOADING ---------------- */
         if (loading) {
-            item {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            }
+            item { LinearProgressIndicator(modifier = Modifier.fillMaxWidth()) }
         }
 
-        /* ---------------- SUMMARY CARDS ---------------- */
+        /* ---------- SUMMARY CARDS ---------- */
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 SummaryCard(
                     title = "Balance",
-                    value = "£$balance",
+                    value = currencyFormatter.format(animatedBalance),
                     backgroundColor = Color(0xFFB2DFDB),
+                    valueColor = Color.Black,
                     modifier = Modifier.weight(1f)
                 )
                 SummaryCard(
                     title = "Income",
-                    value = "£$totalIncome",
+                    value = currencyFormatter.format(animatedIncome),
                     backgroundColor = Color(0xFFFFCCBC),
+                    valueColor = Color(0xFF2E7D32),
                     modifier = Modifier.weight(1f)
                 )
                 SummaryCard(
                     title = "Expenses",
-                    value = "£$totalExpenses",
+                    value = currencyFormatter.format(animatedExpenses),
                     backgroundColor = Color(0xFFFFCDD2),
+                    valueColor = Color(0xFFC62828),
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        /* ---------------- ADD BUTTON ---------------- */
+        /* ---------- ADD TRANSACTION ---------- */
         item {
             Button(
                 onClick = { nav.navigate("addTransaction") },
@@ -131,7 +151,7 @@ fun HomeScreen(nav: NavController) {
             }
         }
 
-        /* ---------------- TITLE ---------------- */
+        /* ---------- TRANSACTIONS ---------- */
         item {
             Text(
                 text = "Recent Transactions",
@@ -140,11 +160,8 @@ fun HomeScreen(nav: NavController) {
             )
         }
 
-        /* ---------------- TRANSACTIONS ---------------- */
         if (visibleTransactions.isEmpty() && !loading) {
-            item {
-                Text("No transactions yet")
-            }
+            item { Text("No transactions yet") }
         } else {
             items(visibleTransactions) { tx ->
                 TransactionCard(
@@ -159,7 +176,6 @@ fun HomeScreen(nav: NavController) {
             }
         }
 
-        /* ---------------- VIEW ALL ---------------- */
         if (transactions.size > 10) {
             item {
                 Button(
@@ -173,29 +189,35 @@ fun HomeScreen(nav: NavController) {
     }
 }
 
-/* ---------------- SUMMARY CARD ---------------- */
+/* ---------- SUMMARY CARD ---------- */
 @Composable
 fun SummaryCard(
     title: String,
     value: String,
     backgroundColor: Color,
+    valueColor: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.height(110.dp),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(18.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(title, fontWeight = FontWeight.Medium)
-            Spacer(modifier = Modifier.height(4.dp))
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = value,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
+                color = valueColor,
+                maxLines = 1
             )
         }
     }

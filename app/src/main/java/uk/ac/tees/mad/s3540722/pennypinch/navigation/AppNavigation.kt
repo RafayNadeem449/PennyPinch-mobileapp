@@ -7,6 +7,7 @@ import androidx.navigation.compose.composable
 import uk.ac.tees.mad.s3540722.pennypinch.ui.AddTransactionScreen
 import uk.ac.tees.mad.s3540722.pennypinch.ui.AllTransactionsScreen
 import uk.ac.tees.mad.s3540722.pennypinch.ui.HomeScreen
+import uk.ac.tees.mad.s3540722.pennypinch.ui.ProfileScreen
 import uk.ac.tees.mad.s3540722.pennypinch.ui.screens.*
 
 @Composable
@@ -16,6 +17,7 @@ fun AppNavigation(navController: NavHostController) {
         composable("login") { LoginScreen(navController) }
         composable("signup") { SignupScreen(navController) }
         composable("home") { HomeScreen(navController) }
+        composable("profile") { ProfileScreen(navController) }
         composable("allTransactions") { AllTransactionsScreen(navController) }
         composable("addTransaction") { AddTransactionScreen(navController) }
     }
