@@ -6,6 +6,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import uk.ac.tees.mad.s3540722.pennypinch.ui.*
 import uk.ac.tees.mad.s3540722.pennypinch.ui.screens.LoginScreen
+import uk.ac.tees.mad.s3540722.pennypinch.ui.InvestmentsScreen
+
 
 @Composable
 fun AppNavigation(navController: NavHostController) {
@@ -37,6 +39,10 @@ fun AppNavigation(navController: NavHostController) {
 
         composable("allTransactions") {
             AllTransactionsScreen(navController)
+        }
+
+        composable("investments") {
+            InvestmentsScreen(navController)
         }
     }
 }
