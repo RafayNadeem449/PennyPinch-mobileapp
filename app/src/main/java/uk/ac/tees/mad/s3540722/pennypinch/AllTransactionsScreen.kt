@@ -3,15 +3,16 @@ package uk.ac.tees.mad.s3540722.pennypinch.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 import uk.ac.tees.mad.s3540722.pennypinch.data.Transaction
+import uk.ac.tees.mad.s3540722.pennypinch.ui.util.DateUtils
 
 @Composable
 fun AllTransactionsScreen(nav: NavController) {
@@ -20,15 +21,17 @@ fun AllTransactionsScreen(nav: NavController) {
     var transactions by remember { mutableStateOf<List<Transaction>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
 
-    fun loadAll() {
+    LaunchedEffect(Unit) {
         scope.launch {
-            loading = true
             transactions = FirebaseService.getTransactions()
+                .sortedByDescending { it.timestamp }
             loading = false
         }
     }
 
-    LaunchedEffect(Unit) { loadAll() }
+    val grouped = transactions.groupBy {
+        DateUtils.formatMonthYear(it.timestamp)
+    }
 
     Column(
         modifier = Modifier
@@ -36,17 +39,14 @@ fun AllTransactionsScreen(nav: NavController) {
             .padding(16.dp)
     ) {
 
-        /* ---------- HEADER WITH BACK ---------- */
+        /* ---------- HEADER ---------- */
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Text("All Transactions", style = MaterialTheme.typography.titleLarge)
             Text(
-                text = "All Transactions",
-                style = MaterialTheme.typography.titleLarge
-            )
-            Text(
-                text = "Back",
+                "Back",
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.clickable { nav.popBackStack() }
             )
@@ -59,26 +59,31 @@ fun AllTransactionsScreen(nav: NavController) {
             return@Column
         }
 
-        if (transactions.isEmpty()) {
-            Text("No transactions found")
-            return@Column
-        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-        /* ---------- SCROLLABLE LIST ---------- */
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(transactions) { tx ->
-                TransactionCard(
-                    tx = tx,
-                    onClear = {
-                        // allow clearing here too
-                        scope.launch {
-                            FirebaseService.markExpenseCleared(tx)
-                            loadAll()
+            grouped.forEach { (month, txs) ->
+
+                item {
+                    Text(
+                        text = month,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                items(txs.size) { index ->
+                    val tx = txs[index]
+                    TransactionCard(
+                        tx = tx,
+                        onClear = {
+                            scope.launch {
+                                FirebaseService.markExpenseCleared(tx)
+                                transactions = FirebaseService.getTransactions()
+                                    .sortedByDescending { it.timestamp }
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
