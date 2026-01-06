@@ -4,9 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import uk.ac.tees.mad.s3540722.pennypinch.BudgetInsightsScreen
+import uk.ac.tees.mad.s3540722.pennypinch.BudgetSetupScreen
+import uk.ac.tees.mad.s3540722.pennypinch.HomeScreen
 import uk.ac.tees.mad.s3540722.pennypinch.ui.*
 import uk.ac.tees.mad.s3540722.pennypinch.ui.screens.LoginScreen
 import uk.ac.tees.mad.s3540722.pennypinch.ui.InvestmentsScreen
+
 
 
 @Composable
@@ -44,5 +48,9 @@ fun AppNavigation(navController: NavHostController) {
         composable("investments") {
             InvestmentsScreen(navController)
         }
+
+        composable("budgetSetup") { BudgetSetupScreen(navController) }
+        composable("budgetInsights") { BudgetInsightsScreen(navController) }
+
     }
 }

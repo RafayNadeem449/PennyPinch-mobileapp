@@ -161,4 +161,50 @@ object FirebaseService {
     suspend fun getTotalInvested(): Double {
         return getInvestments().sumOf { it.amount }
     }
+
+    /* ================= BUDGET (PLANNED) ================= */
+
+    suspend fun savePlannedBudget(budget: PlannedBudget) {
+        val uid = auth.currentUser?.uid ?: return
+
+        val data = mapOf(
+            "periodType" to budget.periodType,
+            "allocations" to budget.allocations,
+            "createdAt" to budget.createdAt
+        )
+
+        // one budget doc per user (simple + stable)
+        db.collection("budgets")
+            .document(uid)
+            .set(data)
+            .await()
+    }
+
+    suspend fun getPlannedBudget(): PlannedBudget? {
+        val uid = auth.currentUser?.uid ?: return null
+
+        val doc = db.collection("budgets")
+            .document(uid)
+            .get()
+            .await()
+
+        if (!doc.exists()) return null
+
+        val periodType = doc.getString("periodType") ?: "MONTHLY"
+        val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+
+        @Suppress("UNCHECKED_CAST")
+        val raw = doc.get("allocations") as? Map<String, Any> ?: emptyMap()
+
+        val allocations = raw.mapValues { (_, v) ->
+            (v as? Number)?.toDouble() ?: 0.0
+        }
+
+        return PlannedBudget(
+            periodType = periodType,
+            allocations = allocations,
+            createdAt = createdAt
+        )
+    }
+
 }
