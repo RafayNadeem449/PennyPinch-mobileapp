@@ -1,15 +1,20 @@
 package uk.ac.tees.mad.s3540722.pennypinch.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
+import uk.ac.tees.mad.s3540722.pennypinch.R
 import uk.ac.tees.mad.s3540722.pennypinch.data.FirebaseService
 
 @Composable
@@ -29,17 +34,53 @@ fun SignupScreen(nav: NavController) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        Text("Create Account", style = MaterialTheme.typography.titleLarge)
+        /* ---------- LOGO ---------- */
+        Image(
+            painter = painterResource(id = R.drawable.penny_logo),
+            contentDescription = "PennyPinch Logo",
+            modifier = Modifier.size(120.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Create Account",
+            style = MaterialTheme.typography.titleLarge
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        OutlinedTextField(firstName, { firstName = it }, label = { Text("First Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(lastName, { lastName = it }, label = { Text("Last Name") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(email, { email = it }, label = { Text("Email") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(password, { password = it }, label = { Text("Password") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(
+            firstName,
+            { firstName = it },
+            label = { Text("First Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            lastName,
+            { lastName = it },
+            label = { Text("Last Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            email,
+            { email = it },
+            label = { Text("Email") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            password,
+            { password = it },
+            label = { Text("Password") },
+            modifier = Modifier.fillMaxWidth()
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -78,5 +119,16 @@ fun SignupScreen(nav: NavController) {
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        /* ---------- BACK TO LOGIN ---------- */
+        Text(
+            text = "Already have an account? Back to Login",
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable {
+                nav.popBackStack()
+            }
+        )
     }
 }

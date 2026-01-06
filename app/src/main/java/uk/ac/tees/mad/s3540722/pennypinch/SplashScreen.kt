@@ -5,8 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -29,7 +29,7 @@ fun SplashScreen(nav: NavController) {
     var start by remember { mutableStateOf(false) }
     var showTagline by remember { mutableStateOf(false) }
 
-    LaunchedEffect(true) {
+    LaunchedEffect(Unit) {
         start = true
         delay(800)
         showTagline = true
@@ -39,20 +39,21 @@ fun SplashScreen(nav: NavController) {
         }
     }
 
-    // Logo scale animation
     val scale by animateFloatAsState(
-        targetValue = if (start) 1f else 0.7f,
-        animationSpec = tween(900, easing = OvershootInterpolatorEasing)
+        targetValue = if (start) 1f else 0.75f,
+        animationSpec = tween(900, easing = OvershootInterpolatorEasing),
+        label = "logoScale"
     )
 
-    // Golden glow animation
-    val glowScale by rememberInfiniteTransition().animateFloat(
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
+    val glowScale by infiniteTransition.animateFloat(
         initialValue = 0.9f,
         targetValue = 1.1f,
         animationSpec = infiniteRepeatable(
             tween(1500, easing = FastOutSlowInEasing),
             RepeatMode.Reverse
-        )
+        ),
+        label = "glowScale"
     )
 
     Box(
@@ -61,13 +62,8 @@ fun SplashScreen(nav: NavController) {
             .background(DeepTeal),
         contentAlignment = Alignment.Center
     ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-
-            // GOLD GLOW BEHIND LOGO
             Box(
                 modifier = Modifier
                     .size(210.dp)
@@ -78,22 +74,20 @@ fun SplashScreen(nav: NavController) {
                     )
             )
 
-            // LOGO with rounded corners (12dp)
             Image(
                 painter = painterResource(id = R.drawable.penny_logo),
                 contentDescription = "PennyPinch Logo",
                 modifier = Modifier
                     .size(160.dp)
-                    .clip(RoundedCornerShape(12.dp))   // 🔥 Rounded corners like border-radius
+                    .clip(RoundedCornerShape(12.dp))
                     .scale(scale)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))  // spacing between logo & text
+            Spacer(modifier = Modifier.height(24.dp))
 
             AnimatedVisibility(
                 visible = showTagline,
-                enter = fadeIn(tween(800)) + slideInVertically { it / 4 },
-                exit = fadeOut()
+                enter = fadeIn(tween(800)) + slideInVertically { it / 4 }
             ) {
                 Text(
                     text = "Smart Budgeting. Smarter You.",
@@ -105,7 +99,6 @@ fun SplashScreen(nav: NavController) {
     }
 }
 
-// Custom easing for pop animation
 val OvershootInterpolatorEasing = Easing { fraction ->
     (fraction - 1).let { t -> 1 + 2.5f * t * t * t + t * t }
 }

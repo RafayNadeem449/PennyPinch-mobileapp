@@ -1,14 +1,18 @@
 package uk.ac.tees.mad.s3540722.pennypinch.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.google.firebase.auth.FirebaseAuth
+import uk.ac.tees.mad.s3540722.pennypinch.R
 
 @Composable
 fun LoginScreen(nav: NavController) {
@@ -23,8 +27,25 @@ fun LoginScreen(nav: NavController) {
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
+        /* ---------- LOGO ---------- */
+        Image(
+            painter = painterResource(id = R.drawable.penny_logo),
+            contentDescription = "PennyPinch Logo",
+            modifier = Modifier.size(120.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Login",
+            style = MaterialTheme.typography.titleLarge
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
 
         TextField(
             value = email,
